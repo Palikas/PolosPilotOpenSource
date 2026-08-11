@@ -1,335 +1,1945 @@
 <!DOCTYPE html>
 <html lang="sk">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>OrbitPilot - ESP32 S3</title>
-    <script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
-    <style>
-        :root {
-            --bg-color: #121212;
-            --panel-bg: #1e1e1e;
-            --accent-color: #00d2ff;
-            --text-color: #e0e0e0;
-            --border-color: #333;
-        }
-        body.night-vision {
-            --bg-color: #050000;
-            --panel-bg: #150000;
-            --accent-color: #ff0000;
-            --text-color: #ff4444;
-            --border-color: #550000;
-        }
-        body.night-vision input, body.night-vision select, body.night-vision button {
-            background: #200000 !important; color: #ff4444 !important; border-color: #550000 !important;
-        }
-        * { box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif; background-color: var(--bg-color);
-            color: var(--text-color); margin: 0; padding: 10px;
-            display: flex; flex-direction: column; align-items: center; overflow-x: hidden;
-            transition: background 0.3s, color 0.3s;
-        }
-        header {
-            width: 100%; max-width: 900px; display: flex; justify-content: space-between;
-            align-items: center; background: var(--panel-bg); padding: 12px 15px;
-            border-radius: 8px; margin-bottom: 10px; border: 1px solid var(--border-color);
-        }
-        .container {
-            width: 100%; max-width: 900px; display: grid; grid-template-columns: 1fr 1fr; gap: 10px;
-        }
-        @media (max-width: 700px) { .container { grid-template-columns: 1fr; } }
-        .panel {
-            background: var(--panel-bg); padding: 15px; border-radius: 8px;
-            border: 1px solid var(--border-color); width: 100%;
-        }
-        .panel.full-width { grid-column: 1 / -1; }
-        h2 { margin-top: 0; font-size: 1.05rem; border-bottom: 1px solid var(--border-color); padding-bottom: 8px; color: var(--accent-color); }
-        button, select, input {
-            background: #2a2a2a; color: var(--text-color); border: 1px solid var(--border-color);
-            padding: 10px; border-radius: 5px; cursor: pointer; width: 100%; margin-top: 8px; font-size: 1rem;
-        }
-        button.active { background: var(--accent-color); color: #000; font-weight: bold; }
-        button:hover { border-color: var(--accent-color); }
-        .btn-ble { background: #0056b3; }
-        .btn-ble:hover { border-color: #00aaff; }
-        .btn-disconnect { background: #331111; }
-        .btn-disconnect:hover { border-color: #ff4444; }
-        
-        .joystick-pad { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 5px; max-width: 200px; margin: 10px auto; }
-        .dpad-btn { touch-action: none; user-select: none; }
-        
-        .dev-console {
-            background: #000; color: var(--accent-color); font-family: monospace;
-            padding: 10px; height: 110px; overflow-y: auto; border-radius: 5px;
-            font-size: 0.85rem; border: 1px solid var(--accent-color); margin-top: 10px;
-        }
-        .status-badge { display: inline-block; width: 10px; height: 10px; border-radius: 50%; background: #ff4444; margin-right: 5px; }
-        .status-badge.connected { background: #44ff44; }
-        .toggle-switch { display: flex; align-items: center; gap: 6px; font-size: 0.85rem; cursor: pointer; }
-    </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<title>Telescope Control</title>
+
+<!-- Astronomy Engine -->
+<script src="https://cdn.jsdelivr.net/npm/astronomy-engine@2.1.19/astronomy.browser.min.js"></script>
+
+<style>
+
+:root {
+    --bg-color: #080b10;
+    --panel-color: #10151c;
+    --panel2-color: #151c25;
+    --text-color: #e8edf2;
+    --accent-color: #00ff88;
+    --blue-color: #2196f3;
+    --danger-color: #ff4444;
+    --border-color: #26313d;
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    margin: 0;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-family: Arial, sans-serif;
+    transition: 0.3s;
+}
+
+body.night-vision {
+    --bg-color: #080000;
+    --panel-color: #120000;
+    --panel2-color: #180000;
+    --text-color: #ff4444;
+    --accent-color: #ff2222;
+    --blue-color: #ff2222;
+    --border-color: #441111;
+}
+
+header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 15px;
+    background: #0c1118;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.container {
+    max-width: 900px;
+    margin: auto;
+    padding: 15px;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.panel {
+    background: var(--panel-color);
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    padding: 15px;
+}
+
+.full-width {
+    grid-column: 1 / -1;
+}
+
+h2 {
+    margin-top: 0;
+    font-size: 1.1rem;
+    color: var(--accent-color);
+}
+
+button,
+select {
+    width: 100%;
+    padding: 12px;
+    margin-top: 8px;
+    border: none;
+    border-radius: 6px;
+    background: var(--panel2-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+    cursor: pointer;
+    font-size: 0.95rem;
+}
+
+button:hover {
+    filter: brightness(1.3);
+}
+
+button:active {
+    transform: scale(0.98);
+}
+
+button.active {
+    border-color: var(--accent-color);
+    color: var(--accent-color);
+}
+
+.btn-ble {
+    background: #123b62;
+}
+
+.btn-disconnect {
+    background: #421919;
+}
+
+.joystick-pad {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 5px;
+    max-width: 300px;
+    margin: 10px auto;
+}
+
+.dpad-btn {
+    touch-action: none;
+    user-select: none;
+    min-height: 60px;
+}
+
+.dev-console {
+    background: #000;
+    color: var(--accent-color);
+    font-family: monospace;
+    padding: 10px;
+    height: 180px;
+    overflow-y: auto;
+    border-radius: 5px;
+    font-size: 0.85rem;
+    border: 1px solid var(--accent-color);
+    margin-top: 10px;
+}
+
+.status-badge {
+    display: inline-block;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #ff4444;
+    margin-right: 5px;
+}
+
+.status-badge.connected {
+    background: #44ff44;
+}
+
+.toggle-switch {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.85rem;
+    cursor: pointer;
+}
+
+.telemetry {
+    margin-top: 10px;
+    font-size: 0.85rem;
+    background: #080808;
+    padding: 10px;
+    border-radius: 5px;
+    border: 1px solid var(--border-color);
+}
+
+.telemetry-main {
+    color: var(--accent-color);
+    font-size: 1.05em;
+    font-weight: bold;
+}
+
+.telemetry-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 5px;
+    margin-top: 8px;
+}
+
+.telemetry-item {
+    background: #111;
+    padding: 7px;
+    border-radius: 4px;
+}
+
+.good {
+    color: #44ff44;
+}
+
+.bad {
+    color: #ff4444;
+}
+
+.warning {
+    color: #ffaa00;
+}
+
+@media (max-width: 700px) {
+
+    .container {
+        grid-template-columns: 1fr;
+    }
+
+    .full-width {
+        grid-column: auto;
+    }
+
+    header {
+        font-size: 0.9rem;
+    }
+}
+
+</style>
 </head>
+
+
 <body id="appBody">
 
-    <header>
-        <div>
-            <span id="statusBadge" class="status-badge"></span>
-            <strong id="statusText">Odpojené</strong>
-        </div>
-        <div style="display: flex; gap: 10px; align-items: center;">
-            <label class="toggle-switch">
-                <input type="checkbox" id="nightModeToggle" onchange="toggleNightVision()"> 🔴 Filter
-            </label>
-        </div>
-    </header>
+<header>
 
-    <div class="container">
-        <div class="panel">
-            <h2>Pripojenie (ESP32 BLE)</h2>
-            <button class="btn-ble" onclick="connectBLE()">🔵 Pripojiť Bluetooth</button>
-            <button class="btn-disconnect" onclick="disconnectAll()">Odpojiť Všetko</button>
-        </div>
-
-        <div class="panel">
-            <h2>Príprava a Kalibrácia</h2>
-            <button onclick="startHoming()">1. Homing & Kalibrácia senzorov</button>
-            
-            <div style="margin-top: 10px; font-size: 0.85rem; background: #111; padding: 6px; border-radius: 4px;">
-                📍 ESP32 Telemetria: <br><span id="telemetryPos" style="color: var(--accent-color); font-size: 1.1em; font-weight: bold;">Čakám na pripojenie...</span>
-            </div>
-        </div>
-
-        <div class="panel">
-            <h2>Ovládanie teleskopu (Web D-Pad)</h2>
-            <div id="digitalJoystick" class="joystick-pad">
-                <div></div><button class="dpad-btn" data-dir="UP">⬆ Hore</button><div></div>
-                <button class="dpad-btn" data-dir="LEFT">⬅ Vľavo</button>
-                <button class="dpad-btn" data-dir="STOP" style="background:#442222">⏹ Stop</button>
-                <button class="dpad-btn" data-dir="RIGHT">Vpravo ➡</button>
-                <div></div><button class="dpad-btn" data-dir="DOWN">⬇ Dole</button><div></div>
-            </div>
-        </div>
-
-        <div class="panel">
-            <h2>Automatické GoTo</h2>
-            <select id="skyObjectsSelect">
-                <option value="">Načítavam oblohu z GPS...</option>
-            </select>
-            <input type="hidden" id="cfgMicrostepAZ" value="16">
-            <input type="hidden" id="cfgReductionAZ" value="52.8"> <input type="hidden" id="cfgMicrostepALT" value="16">
-            <input type="hidden" id="cfgReductionALT" value="10.0"> <button onclick="calculateAndSendGoto()">Vypočítať a ísť na GoTo</button>
-        </div>
-
-        <div class="panel full-width">
-            <h2>Systémové Funkcie</h2>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
-                <button id="fanBtn" onclick="toggleFan()">Ventilátor: VYPNUTÝ</button>
-                <button id="followBtn" onclick="toggleFollow()">Sledovanie oblohy: VYPNUTÉ</button>
-            </div>
-        </div>
-
-        <div class="panel full-width">
-            <h2>[Dev Console & Logs]</h2>
-            <div class="dev-console" id="logContent">Systém pripravený...</div>
-        </div>
+    <div>
+        <span id="statusBadge" class="status-badge"></span>
+        <strong id="statusText">Odpojené</strong>
     </div>
 
-    <script>
-        // --- BLE premenné ---
-        let bluetoothDevice = null;
-        let rxCharacteristic = null;
-        let txCharacteristic = null;
-        let bleReceiveBuffer = "";
-        
-        const UART_SERVICE_UUID = "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
-        const UART_RX_UUID      = "6e400002-b5a3-f393-e0a9-e50e24dcca9e"; 
-        const UART_TX_UUID      = "6e400003-b5a3-f393-e0a9-e50e24dcca9e"; 
+    <div style="display:flex; gap:10px; align-items:center;">
 
-        let userLat = 48.669, userLon = 19.699;
-        let telescopePos = { az: 0, alt: 0 };
-        let fanState = false;
-        let followState = false;
+        <label class="toggle-switch">
 
-        window.onload = function() {
-            if (navigator.geolocation) {
-                navigator.geolocation.getCurrentPosition(pos => {
-                    userLat = pos.coords.latitude; userLon = pos.coords.longitude;
-                    initSkyObjects();
-                }, () => initSkyObjects());
-            } else { initSkyObjects(); }
-            initDigitalDpad();
-        };
+            <input
+                type="checkbox"
+                id="nightModeToggle"
+                onchange="toggleNightVision()"
+            >
 
-        function log(message) {
-            const consoleDiv = document.getElementById('logContent');
-            const time = new Date().toLocaleTimeString();
-            consoleDiv.innerHTML += `<br>[${time}] ${message}`;
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;
-        }
+            🔴 Filter
 
-        function toggleNightVision() {
-            document.getElementById('appBody').classList.toggle('night-vision', document.getElementById('nightModeToggle').checked);
-        }
+        </label>
 
-        function startHoming() {
-            sendCmd("HOME");
-            log("Spustená kalibračná rutina (Homing)...");
-        }
+    </div>
 
-        function initSkyObjects() {
-            const select = document.getElementById('skyObjectsSelect');
-            select.innerHTML = '<option value="">-- Vyber objekt --</option>';
-            const now = new Date();
-            const observer = new Astronomy.Observer(userLat, userLon, 0);
-            ["Moon", "Jupiter", "Saturn", "Mars"].forEach(target => {
-                try {
-                    const eq = Astronomy.Equator(target, now, observer, true, true);
-                    const hor = Astronomy.Horizon(now, observer, eq.ra, eq.dec, "apparent");
-                    if (hor.altitude > 0) {
-                        let opt = document.createElement('option');
-                        opt.value = JSON.stringify({ name: target, az: hor.azimuth, alt: hor.altitude });
-                        opt.textContent = `${target} | Az: ${hor.azimuth.toFixed(1)}° Alt: ${hor.altitude.toFixed(1)}°`;
-                        select.appendChild(opt);
-                    }
-                } catch(e) {}
-            });
-        }
+</header>
 
-        function shortestAngleDelta(target, current) {
-            return ((target - current + 180) % 360 + 360) % 360 - 180;
-        }
 
-        function calculateAndSendGoto() {
-            const select = document.getElementById('skyObjectsSelect');
-            if(!select.value) return;
-            const target = JSON.parse(select.value);
-            
-            const microstepAZ = parseInt(document.getElementById('cfgMicrostepAZ').value);
-            const reductionAZ = parseFloat(document.getElementById('cfgReductionAZ').value);
-            const microstepALT = parseInt(document.getElementById('cfgMicrostepALT').value);
-            const reductionALT = parseFloat(document.getElementById('cfgReductionALT').value);
+<div class="container">
 
-            const deltaAz = shortestAngleDelta(target.az, telescopePos.az);
-            const deltaAlt = target.alt - telescopePos.alt; 
 
-            // Výpočet krokov, o ktoré sa má motor posunúť z aktuálnej polohy (delta)
-            let stepsAz = Math.round(deltaAz * ((200 * microstepAZ * reductionAZ) / 360.0));
-            let stepsAlt = Math.round(deltaAlt * ((200 * microstepALT * reductionALT) / 360.0));
+    <!-- ===================================================== -->
+    <!-- BLE -->
+    <!-- ===================================================== -->
 
-            // Nový formát pre ESP32 (GOTO:delta_az:delta_alt)
-            let cmd = `GOTO:${stepsAz}:${stepsAlt}`;
-            log("[WEB GOTO] " + cmd);
-            sendCmd(cmd);
-        }
+    <div class="panel">
 
-        function initDigitalDpad() {
-            const buttons = document.querySelectorAll('#digitalJoystick .dpad-btn');
-            buttons.forEach(btn => {
-                const dir = btn.dataset.dir;
-                const start = (e) => { e.preventDefault(); sendCmd(`MOVE:${dir}`); };
-                const stop = (e) => { e.preventDefault(); if (dir !== 'STOP') sendCmd('MOVE:STOP'); };
+        <h2>Pripojenie ESP32</h2>
 
-                btn.addEventListener('pointerdown', start);
-                btn.addEventListener('pointerup', stop);
-                btn.addEventListener('pointercancel', stop);
-                btn.addEventListener('pointerleave', stop);
-            });
-        }
+        <button
+            class="btn-ble"
+            onclick="connectBLE()"
+        >
+            🔵 Pripojiť Bluetooth
+        </button>
 
-        async function connectBLE() {
-            if (!navigator.bluetooth) { alert('Tvoj prehliadač nepodporuje Web Bluetooth (použi Chrome/Edge)!'); return; }
+        <button
+            class="btn-disconnect"
+            onclick="disconnectAll()"
+        >
+            Odpojiť
+        </button>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- HOMING -->
+    <!-- ===================================================== -->
+
+    <div class="panel">
+
+        <h2>Príprava a Kalibrácia</h2>
+
+        <button onclick="startHoming()">
+            🏠 Spustiť Homing
+        </button>
+
+        <div class="telemetry">
+
+            <div>
+                📍 Poloha teleskopu
+            </div>
+
+            <div
+                id="telemetryPos"
+                class="telemetry-main"
+            >
+                Čakám na telemetriu...
+            </div>
+
+            <div class="telemetry-grid">
+
+                <div class="telemetry-item">
+                    Režim:
+                    <span id="telemetryMode">
+                        ---
+                    </span>
+                </div>
+
+                <div class="telemetry-item">
+                    Rýchlosť:
+                    <span id="telemetrySpeed">
+                        ---
+                    </span>
+                </div>
+
+                <div class="telemetry-item">
+                    Motory:
+                    <span id="telemetryMotors">
+                        ---
+                    </span>
+                </div>
+
+                <div class="telemetry-item">
+                    IMU:
+                    <span id="telemetryIMU">
+                        ---
+                    </span>
+                </div>
+
+                <div class="telemetry-item">
+                    Homed:
+                    <span id="telemetryHomed">
+                        ---
+                    </span>
+                </div>
+
+                <div class="telemetry-item">
+                    GPS:
+                    <span id="telemetryGPS">
+                        ---
+                    </span>
+                </div>
+
+            </div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- MANUAL -->
+    <!-- ===================================================== -->
+
+    <div class="panel">
+
+        <h2>Ovládanie teleskopu</h2>
+
+        <div
+            id="digitalJoystick"
+            class="joystick-pad"
+        >
+
+            <div></div>
+
+            <button
+                class="dpad-btn"
+                data-dir="UP"
+            >
+                ⬆ Hore
+            </button>
+
+            <div></div>
+
+
+            <button
+                class="dpad-btn"
+                data-dir="LEFT"
+            >
+                ⬅ Vľavo
+            </button>
+
+
+            <button
+                class="dpad-btn"
+                data-dir="STOP"
+                style="background:#442222"
+            >
+                ⏹ Stop
+            </button>
+
+
+            <button
+                class="dpad-btn"
+                data-dir="RIGHT"
+            >
+                Vpravo ➡
+            </button>
+
+
+            <div></div>
+
+            <button
+                class="dpad-btn"
+                data-dir="DOWN"
+            >
+                ⬇ Dole
+            </button>
+
+            <div></div>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- GOTO -->
+    <!-- ===================================================== -->
+
+    <div class="panel">
+
+        <h2>Automatické GoTo</h2>
+
+        <select id="skyObjectsSelect">
+
+            <option value="">
+                Načítavam oblohu z GPS...
+            </option>
+
+        </select>
+
+        <button onclick="calculateAndSendGoto()">
+            🎯 Vypočítať a ísť na GoTo
+        </button>
+
+        <div
+            style="
+                margin-top:10px;
+                font-size:0.8rem;
+                opacity:0.7;
+            "
+        >
+            ESP32 dostane absolútnu AZ/ALT
+            polohu a samo vypočíta potrebné kroky.
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- SYSTEM -->
+    <!-- ===================================================== -->
+
+    <div class="panel full-width">
+
+        <h2>Systémové Funkcie</h2>
+
+        <div
+            style="
+                display:grid;
+                grid-template-columns:1fr 1fr;
+                gap:10px;
+            "
+        >
+
+            <button
+                id="fanBtn"
+                onclick="toggleFan()"
+            >
+                Ventilátor: VYPNUTÝ
+            </button>
+
+
+            <button
+                id="followBtn"
+                onclick="toggleFollow()"
+            >
+                Sledovanie oblohy: VYPNUTÉ
+            </button>
+
+        </div>
+
+    </div>
+
+
+    <!-- ===================================================== -->
+    <!-- LOG -->
+    <!-- ===================================================== -->
+
+    <div class="panel full-width">
+
+        <h2>[Dev Console & Logs]</h2>
+
+        <div
+            class="dev-console"
+            id="logContent"
+        >
+            Systém pripravený...
+        </div>
+
+    </div>
+
+</div>
+
+
+<script>
+
+
+// ============================================================
+// BLE VARIABLES
+// ============================================================
+
+let bluetoothDevice = null;
+
+let rxCharacteristic = null;
+
+let txCharacteristic = null;
+
+let bleReceiveBuffer = "";
+
+
+const UART_SERVICE_UUID =
+    "6e400001-b5a3-f393-e0a9-e50e24dcca9e";
+
+const UART_RX_UUID =
+    "6e400002-b5a3-f393-e0a9-e50e24dcca9e";
+
+const UART_TX_UUID =
+    "6e400003-b5a3-f393-e0a9-e50e24dcca9e";
+
+
+// ============================================================
+// TELESCOPE STATE
+// ============================================================
+
+let telescopePos = {
+
+    az: 0,
+
+    alt: 0
+
+};
+
+let telescopeMode = "UNKNOWN";
+
+let telescopeSpeed = 0;
+
+let motorsEnabled = false;
+
+let imuState = "UNKNOWN";
+
+let homed = false;
+
+
+let fanState = false;
+
+let followState = false;
+
+
+// ============================================================
+// GPS
+// ============================================================
+
+let userLat = 48.682586;
+
+let userLon = 20.975657;
+
+
+// ============================================================
+// WINDOW LOAD
+// ============================================================
+
+window.onload = function() {
+
+    log("Web rozhranie spustené.");
+
+    initDigitalDpad();
+
+
+    if (navigator.geolocation) {
+
+        navigator.geolocation.getCurrentPosition(
+
+            function(pos) {
+
+                userLat =
+                    pos.coords.latitude;
+
+                userLon =
+                    pos.coords.longitude;
+
+
+                log(
+                    "GPS: " +
+                    userLat.toFixed(6) +
+                    ", " +
+                    userLon.toFixed(6)
+                );
+
+
+                updateGPSUI();
+
+                initSkyObjects();
+
+            },
+
+            function() {
+
+                log(
+                    "GPS nedostupné."
+                );
+
+                log(
+                    "Používam predvolenú polohu."
+                );
+
+                updateGPSUI();
+
+                initSkyObjects();
+
+            }
+
+        );
+
+    } else {
+
+        log(
+            "Prehliadač nepodporuje GPS."
+        );
+
+        initSkyObjects();
+
+    }
+
+};
+
+
+// ============================================================
+// LOG
+// ============================================================
+
+function log(message) {
+
+    const consoleDiv =
+        document.getElementById(
+            "logContent"
+        );
+
+
+    const time =
+        new Date().toLocaleTimeString();
+
+
+    consoleDiv.innerHTML +=
+        `<br>[${time}] ${message}`;
+
+
+    consoleDiv.scrollTop =
+        consoleDiv.scrollHeight;
+
+}
+
+
+// ============================================================
+// NIGHT VISION
+// ============================================================
+
+function toggleNightVision() {
+
+    const enabled =
+        document.getElementById(
+            "nightModeToggle"
+        ).checked;
+
+
+    document
+        .getElementById("appBody")
+        .classList.toggle(
+            "night-vision",
+            enabled
+        );
+
+}
+
+
+// ============================================================
+// GPS UI
+// ============================================================
+
+function updateGPSUI() {
+
+    document.getElementById(
+        "telemetryGPS"
+    ).innerText =
+
+        userLat.toFixed(5) +
+        ", " +
+        userLon.toFixed(5);
+
+}
+
+
+// ============================================================
+// HOMING
+// ============================================================
+
+function startHoming() {
+
+    sendCmd(
+        "CMD:HOME"
+    );
+
+
+    log(
+        "Požiadavka na Homing odoslaná."
+    );
+
+}
+
+
+// ============================================================
+// ASTRONOMY
+// ============================================================
+
+function initSkyObjects() {
+
+    const select =
+        document.getElementById(
+            "skyObjectsSelect"
+        );
+
+
+    select.innerHTML =
+        '<option value="">-- Vyber objekt --</option>';
+
+
+    const now =
+        new Date();
+
+
+    const observer =
+        new Astronomy.Observer(
+            userLat,
+            userLon,
+            0
+        );
+
+
+    const objects = [
+
+        "Moon",
+
+        "Jupiter",
+
+        "Saturn",
+
+        "Mars"
+
+    ];
+
+
+    objects.forEach(
+        function(target) {
+
             try {
-                updateStatusUI("Hľadám Bluetooth...", false);
-                bluetoothDevice = await navigator.bluetooth.requestDevice({
-                    acceptAllDevices: true, optionalServices: [UART_SERVICE_UUID]
-                });
 
-                bluetoothDevice.addEventListener('gattserverdisconnected', onBleDisconnected);
+                const eq =
+                    Astronomy.Equator(
+                        target,
+                        now,
+                        observer,
+                        true,
+                        true
+                    );
 
-                const server = await bluetoothDevice.gatt.connect();
-                const service = await server.getPrimaryService(UART_SERVICE_UUID);
-                
-                rxCharacteristic = await service.getCharacteristic(UART_RX_UUID);
-                txCharacteristic = await service.getCharacteristic(UART_TX_UUID);
-                
-                await txCharacteristic.startNotifications();
-                txCharacteristic.addEventListener('characteristicvaluechanged', handleBleNotifications);
 
-                updateStatusUI("Bluetooth Pripojené", true);
-                log("Pripojené k: " + bluetoothDevice.name);
+                const hor =
+                    Astronomy.Horizon(
+                        now,
+                        observer,
+                        eq.ra,
+                        eq.dec,
+                        "apparent"
+                    );
 
-            } catch (error) {
-                console.error(error);
-                updateStatusUI("Odpojené", false);
-                log("Pripojenie Bluetooth zlyhalo.");
-            }
-        }
 
-        function handleBleNotifications(event) {
-            const decoder = new TextDecoder('utf-8');
-            bleReceiveBuffer += decoder.decode(event.target.value);
-            
-            let lines = bleReceiveBuffer.split('\n');
-            for (let i = 0; i < lines.length - 1; i++) {
-                // Skúšame rozkódovať ESP32 JSON
-                try {
-                    let obj = JSON.parse(lines[i].trim());
-                    if(obj.az !== undefined) {
-                        telescopePos.az = obj.az;
-                        telescopePos.alt = obj.alt;
-                        document.getElementById('telemetryPos').innerText = `Režim: [${obj.mode}] | Az: ${obj.az.toFixed(1)}°, Alt: ${obj.alt.toFixed(1)}°`;
-                    }
-                } catch(e) {
-                    // Ak to nie je JSON (je to status), vypíšeme do konzoly
-                    log("Stav: " + lines[i].trim());
-                    if(lines[i].trim() === "STATUS:HOMING_OK") alert("Kalibrácia Homing dokončená!");
+                if (
+                    hor.altitude > 0
+                ) {
+
+                    const option =
+                        document.createElement(
+                            "option"
+                        );
+
+
+                    option.value =
+                        JSON.stringify({
+
+                            name: target,
+
+                            az: hor.azimuth,
+
+                            alt: hor.altitude,
+
+                            ra: eq.ra,
+
+                            dec: eq.dec
+
+                        });
+
+
+                    option.textContent =
+
+                        `${target} | ` +
+
+                        `Az: ` +
+                        hor.azimuth.toFixed(1) +
+                        "° | " +
+
+                        `Alt: ` +
+                        hor.altitude.toFixed(1) +
+                        "°"
+
+
+                    select.appendChild(
+                        option
+                    );
+
                 }
+
             }
-            bleReceiveBuffer = lines[lines.length - 1];
-        }
 
-        function onBleDisconnected() {
-            rxCharacteristic = null; txCharacteristic = null; bluetoothDevice = null;
-            updateStatusUI("Odpojené", false);
-            log("Bluetooth odpojené.");
-        }
+            catch(error) {
 
-        function disconnectAll() { 
-            if(bluetoothDevice && bluetoothDevice.gatt.connected) bluetoothDevice.gatt.disconnect();
-        }
+                console.error(
+                    error
+                );
 
-        function updateStatusUI(text, isConnected) {
-            document.getElementById('statusText').innerText = text;
-            if (isConnected) document.getElementById('statusBadge').classList.add('connected');
-            else document.getElementById('statusBadge').classList.remove('connected');
-        }
-
-        async function sendCmd(cmd) {
-            if (rxCharacteristic) {
-                try {
-                    const encoder = new TextEncoder();
-                    await rxCharacteristic.writeValue(encoder.encode(cmd + "\n"));
-                } catch (error) { console.error("BLE Send Error:", error); }
-            } else {
-                log("CHYBA: Najprv sa pripoj k Bluetooth!");
             }
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// GOTO
+// ============================================================
+
+function calculateAndSendGoto() {
+
+    const select =
+        document.getElementById(
+            "skyObjectsSelect"
+        );
+
+
+    if (!select.value) {
+
+        log(
+            "Vyber objekt."
+        );
+
+        return;
+
+    }
+
+
+    const target =
+        JSON.parse(
+            select.value
+        );
+
+
+    // --------------------------------------------------------
+    // SEND CURRENT GPS
+    // --------------------------------------------------------
+
+    sendCmd(
+
+        `CMD:GPS:${userLat}:${userLon}`
+
+    );
+
+
+    // --------------------------------------------------------
+    // SEND RA / DEC
+    // --------------------------------------------------------
+
+    if (
+
+        target.ra !== undefined &&
+
+        target.dec !== undefined
+
+    ) {
+
+        sendCmd(
+
+            `CMD:TARGET:${target.ra}:${target.dec}`
+
+        );
+
+    }
+
+
+    // --------------------------------------------------------
+    // ABSOLUTE GOTO
+    // --------------------------------------------------------
+
+    const az =
+        Number(target.az);
+
+
+    const alt =
+        Number(target.alt);
+
+
+    if (
+
+        !Number.isFinite(az) ||
+
+        !Number.isFinite(alt)
+
+    ) {
+
+        log(
+            "CHYBA: Neplatné AZ/ALT."
+        );
+
+        return;
+
+    }
+
+
+    const cmd =
+
+        `CMD:GOTO:${az}:${alt}`;
+
+
+    log(
+        "[WEB GOTO] " +
+        cmd
+    );
+
+
+    sendCmd(
+        cmd
+    );
+
+}
+
+
+// ============================================================
+// DIGITAL D-PAD
+// ============================================================
+
+function initDigitalDpad() {
+
+    const buttons =
+
+        document.querySelectorAll(
+            "#digitalJoystick .dpad-btn"
+        );
+
+
+    buttons.forEach(
+        function(btn) {
+
+            const dir =
+                btn.dataset.dir;
+
+
+            // PRESS
+
+            const start =
+                function(e) {
+
+                    e.preventDefault();
+
+
+                    if (
+                        dir === "STOP"
+                    ) {
+
+                        sendCmd(
+                            "CMD:MOVE:STOP"
+                        );
+
+                    }
+
+                    else {
+
+                        sendCmd(
+                            `CMD:MOVE:${dir}`
+                        );
+
+                    }
+
+                };
+
+
+            // RELEASE
+
+            const stop =
+                function(e) {
+
+                    e.preventDefault();
+
+
+                    if (
+                        dir !== "STOP"
+                    ) {
+
+                        sendCmd(
+                            "CMD:MOVE:STOP"
+                        );
+
+                    }
+
+                };
+
+
+            btn.addEventListener(
+                "pointerdown",
+                start
+            );
+
+
+            btn.addEventListener(
+                "pointerup",
+                stop
+            );
+
+
+            btn.addEventListener(
+                "pointercancel",
+                stop
+            );
+
+
+            btn.addEventListener(
+                "pointerleave",
+                stop
+            );
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// BLE CONNECT
+// ============================================================
+
+async function connectBLE() {
+
+    if (
+        !navigator.bluetooth
+    ) {
+
+        alert(
+            "Použi Chrome alebo Edge."
+        );
+
+        return;
+
+    }
+
+
+    try {
+
+        updateStatusUI(
+            "Hľadám Bluetooth...",
+            false
+        );
+
+
+        bluetoothDevice =
+
+            await navigator.bluetooth.requestDevice({
+
+                filters: [
+
+                    {
+                        name:
+                            "Telescope-ESP32"
+                    }
+
+                ],
+
+                optionalServices: [
+
+                    UART_SERVICE_UUID
+
+                ]
+
+            });
+
+
+        log(
+            "Nájdené: " +
+            bluetoothDevice.name
+        );
+
+
+        bluetoothDevice.addEventListener(
+
+            "gattserverdisconnected",
+
+            onBleDisconnected
+
+        );
+
+
+        const server =
+
+            await bluetoothDevice.gatt.connect();
+
+
+        const service =
+
+            await server.getPrimaryService(
+
+                UART_SERVICE_UUID
+
+            );
+
+
+        rxCharacteristic =
+
+            await service.getCharacteristic(
+
+                UART_RX_UUID
+
+            );
+
+
+        txCharacteristic =
+
+            await service.getCharacteristic(
+
+                UART_TX_UUID
+
+            );
+
+
+        await txCharacteristic
+            .startNotifications();
+
+
+        txCharacteristic.addEventListener(
+
+            "characteristicvaluechanged",
+
+            handleBleNotifications
+
+        );
+
+
+        updateStatusUI(
+
+            "Bluetooth Pripojené",
+
+            true
+
+        );
+
+
+        log(
+            "Bluetooth pripojené."
+        );
+
+
+        // Send GPS
+
+        sendCmd(
+
+            `CMD:GPS:${userLat}:${userLon}`
+
+        );
+
+
+    }
+
+    catch(error) {
+
+        console.error(
+            error
+        );
+
+
+        updateStatusUI(
+
+            "Odpojené",
+
+            false
+
+        );
+
+
+        log(
+
+            "BLE chyba: " +
+            error.message
+
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// BLE RECEIVE
+// ============================================================
+
+function handleBleNotifications(event) {
+
+    const decoder =
+        new TextDecoder(
+            "utf-8"
+        );
+
+
+    bleReceiveBuffer +=
+
+        decoder.decode(
+            event.target.value
+        );
+
+
+    const lines =
+
+        bleReceiveBuffer.split(
+            "\n"
+        );
+
+
+    bleReceiveBuffer =
+        lines.pop();
+
+
+    lines.forEach(
+        function(line) {
+
+            line =
+                line.trim();
+
+
+            if (!line)
+                return;
+
+
+            parseESP32Message(
+                line
+            );
+
+        }
+    );
+
+}
+
+
+// ============================================================
+// ESP32 MESSAGE
+// ============================================================
+
+function parseESP32Message(message) {
+
+
+    log(
+        "[ESP32] " +
+        message
+    );
+
+
+    // ========================================================
+    // TELEMETRY
+    // ========================================================
+
+    if (
+        message.startsWith(
+            "POS:"
+        )
+    ) {
+
+        const parts =
+            message.split(":");
+
+
+        for (
+            let i = 0;
+            i < parts.length - 1;
+            i++
+        ) {
+
+            switch (
+                parts[i]
+            ) {
+
+                case "AZ":
+
+                    telescopePos.az =
+
+                        parseFloat(
+                            parts[i + 1]
+                        );
+
+                    break;
+
+
+                case "ALT":
+
+                    telescopePos.alt =
+
+                        parseFloat(
+                            parts[i + 1]
+                        );
+
+                    break;
+
+
+                case "MODE":
+
+                    telescopeMode =
+
+                        parts[i + 1];
+
+                    break;
+
+
+                case "SPEED":
+
+                    telescopeSpeed =
+
+                        parseFloat(
+                            parts[i + 1]
+                        );
+
+                    break;
+
+
+                case "MOTORS":
+
+                    motorsEnabled =
+
+                        parts[i + 1] ===
+                        "1";
+
+                    break;
+
+
+                case "IMU":
+
+                    imuState =
+
+                        parts[i + 1];
+
+                    break;
+
+
+                case "HOMED":
+
+                    homed =
+
+                        parts[i + 1] ===
+                        "1";
+
+                    break;
+
+            }
+
         }
 
-        function toggleFan() {
-            fanState = !fanState;
-            const btn = document.getElementById('fanBtn');
-            btn.innerText = fanState ? "Ventilátor: ZAPNUTÝ" : "Ventilátor: VYPNUTÝ";
-            btn.classList.toggle('active', fanState);
-            sendCmd(fanState ? "FAN_ON" : "FAN_OFF");
+
+        updateTelemetryUI();
+
+
+        return;
+
+    }
+
+
+    // ========================================================
+    // STATUS
+    // ========================================================
+
+    if (
+        message.startsWith(
+            "STATUS:"
+        )
+    ) {
+
+        handleStatusMessage(
+            message
+        );
+
+
+        return;
+
+    }
+
+
+    // ========================================================
+    // SPEED
+    // ========================================================
+
+    if (
+        message.startsWith(
+            "SPEED:"
+        )
+    ) {
+
+        const speed =
+
+            parseFloat(
+                message.split(":")[1]
+            );
+
+
+        if (
+            Number.isFinite(
+                speed
+            )
+        ) {
+
+            telescopeSpeed =
+                speed;
+
+            updateTelemetryUI();
+
         }
 
-        function toggleFollow() {
-            followState = !followState;
-            const btn = document.getElementById('followBtn');
-            btn.innerText = followState ? "Sledovanie: ZAPNUTÉ" : "Sledovanie: VYPNUTÉ";
-            btn.classList.toggle('active', followState);
-            sendCmd(followState ? "FOLLOW" : "MANUAL");
-        }
-    </script>
+    }
+
+}
+
+
+// ============================================================
+// STATUS MESSAGE
+// ============================================================
+
+function handleStatusMessage(status) {
+
+
+    switch(status) {
+
+
+        case "STATUS:HOMING_STARTED":
+
+            log(
+                "Homing spustený."
+            );
+
+            break;
+
+
+        case "STATUS:HOMING_OK":
+
+            homed = true;
+
+            updateTelemetryUI();
+
+
+            alert(
+                "Homing dokončený!"
+            );
+
+            break;
+
+
+        case "STATUS:HOMING_ERROR":
+
+            homed = false;
+
+            updateTelemetryUI();
+
+
+            alert(
+                "Homing zlyhal!"
+            );
+
+            break;
+
+
+        case "STATUS:NOT_HOMED":
+
+            alert(
+                "Teleskop ešte nie je homed!"
+            );
+
+            break;
+
+
+        case "STATUS:IMU_ERROR":
+
+            imuState =
+                "ERROR";
+
+
+            updateTelemetryUI();
+
+
+            alert(
+                "MPU6500 chyba!"
+            );
+
+            break;
+
+
+        case "STATUS:FOLLOWING_ON":
+
+            followState =
+                true;
+
+
+            updateFollowButton();
+
+
+            log(
+                "Sledovanie ZAPNUTÉ."
+            );
+
+            break;
+
+
+        case "STATUS:MANUAL":
+
+            followState =
+                false;
+
+
+            updateFollowButton();
+
+            break;
+
+
+        case "STATUS:GOTO_STARTED":
+
+            log(
+                "GoTo spustené."
+            );
+
+            break;
+
+
+        case "STATUS:GOTO_DONE":
+
+            log(
+                "GoTo dokončené."
+            );
+
+            break;
+
+
+        case "STATUS:ZENITH_FLIP":
+
+            log(
+                "Zenith Flip."
+            );
+
+            break;
+
+
+        case "STATUS:ZENITH_FLIP_DONE":
+
+            log(
+                "Zenith Flip dokončený."
+            );
+
+            break;
+
+    }
+
+}
+
+
+// ============================================================
+// TELEMETRY UI
+// ============================================================
+
+function updateTelemetryUI() {
+
+
+    document.getElementById(
+        "telemetryPos"
+    ).innerText =
+
+        `Az: ${telescopePos.az.toFixed(2)}° | ` +
+
+        `Alt: ${telescopePos.alt.toFixed(2)}°`;
+
+
+    document.getElementById(
+        "telemetryMode"
+    ).innerText =
+
+        telescopeMode;
+
+
+    document.getElementById(
+        "telemetrySpeed"
+    ).innerText =
+
+        telescopeSpeed.toFixed(1) +
+        "%";
+
+
+    const motors =
+
+        document.getElementById(
+            "telemetryMotors"
+        );
+
+
+    motors.innerText =
+
+        motorsEnabled
+            ? "ON"
+            : "OFF";
+
+
+    motors.className =
+
+        motorsEnabled
+            ? "good"
+            : "bad";
+
+
+    const imu =
+
+        document.getElementById(
+            "telemetryIMU"
+        );
+
+
+    imu.innerText =
+        imuState;
+
+
+    imu.className =
+
+        imuState === "OK"
+            ? "good"
+            : "bad";
+
+
+    const homedElement =
+
+        document.getElementById(
+            "telemetryHomed"
+        );
+
+
+    homedElement.innerText =
+
+        homed
+            ? "ÁNO"
+            : "NIE";
+
+
+    homedElement.className =
+
+        homed
+            ? "good"
+            : "bad";
+
+}
+
+
+// ============================================================
+// BLE DISCONNECT
+// ============================================================
+
+function onBleDisconnected() {
+
+
+    rxCharacteristic = null;
+
+    txCharacteristic = null;
+
+    bluetoothDevice = null;
+
+
+    updateStatusUI(
+        "Odpojené",
+        false
+    );
+
+
+    log(
+        "Bluetooth odpojené."
+    );
+
+}
+
+
+// ============================================================
+// DISCONNECT ALL
+// ============================================================
+
+function disconnectAll() {
+
+
+    if (
+
+        bluetoothDevice &&
+
+        bluetoothDevice.gatt &&
+
+        bluetoothDevice.gatt.connected
+
+    ) {
+
+        bluetoothDevice.gatt.disconnect();
+
+    }
+
+    else {
+
+        onBleDisconnected();
+
+    }
+
+}
+
+
+// ============================================================
+// STATUS UI
+// ============================================================
+
+function updateStatusUI(
+    text,
+    connected
+) {
+
+
+    document.getElementById(
+        "statusText"
+    ).innerText =
+        text;
+
+
+    document.getElementById(
+        "statusBadge"
+    ).classList.toggle(
+        "connected",
+        connected
+    );
+
+}
+
+
+// ============================================================
+// SEND COMMAND
+// ============================================================
+
+async function sendCmd(cmd) {
+
+
+    if (
+        !rxCharacteristic
+    ) {
+
+        log(
+            "CHYBA: ESP32 nie je pripojené."
+        );
+
+        return false;
+
+    }
+
+
+    try {
+
+        const encoder =
+            new TextEncoder();
+
+
+        const data =
+            encoder.encode(
+                cmd + "\n"
+            );
+
+
+        await rxCharacteristic
+            .writeValue(
+                data
+            );
+
+
+        log(
+            "[WEB → ESP32] " +
+            cmd
+        );
+
+
+        return true;
+
+    }
+
+    catch(error) {
+
+        console.error(
+            error
+        );
+
+
+        log(
+            "BLE SEND ERROR: " +
+            error.message
+        );
+
+
+        return false;
+
+    }
+
+}
+
+
+// ============================================================
+// FAN
+// ============================================================
+
+function toggleFan() {
+
+
+    fanState =
+        !fanState;
+
+
+    const btn =
+
+        document.getElementById(
+            "fanBtn"
+        );
+
+
+    btn.innerText =
+
+        fanState
+
+            ? "Ventilátor: ZAPNUTÝ"
+
+            : "Ventilátor: VYPNUTÝ";
+
+
+    btn.classList.toggle(
+
+        "active",
+
+        fanState
+
+    );
+
+
+    sendCmd(
+
+        fanState
+
+            ? "CMD:FAN:1"
+
+            : "CMD:FAN:0"
+
+    );
+
+}
+
+
+// ============================================================
+// FOLLOW
+// ============================================================
+
+function toggleFollow() {
+
+
+    if (
+        followState
+    ) {
+
+        sendCmd(
+            "MANUAL"
+        );
+
+    }
+
+    else {
+
+        sendCmd(
+            "FOLLOW"
+        );
+
+    }
+
+}
+
+
+// ============================================================
+// FOLLOW BUTTON UI
+// ============================================================
+
+function updateFollowButton() {
+
+
+    const btn =
+
+        document.getElementById(
+            "followBtn"
+        );
+
+
+    btn.innerText =
+
+        followState
+
+            ? "Sledovanie oblohy: ZAPNUTÉ"
+
+            : "Sledovanie oblohy: VYPNUTÉ";
+
+
+    btn.classList.toggle(
+
+        "active",
+
+        followState
+
+    );
+
+}
+
+</script>
+
 </body>
 </html>
